@@ -2,8 +2,8 @@
 
 using namespace std;
 
-char a[20]= "(3+3+3)/3";
-int num = 9;
+char a[20]= "3d6";
+int num = 3;
 
 
 double reg[5];
@@ -30,7 +30,7 @@ int request_reg()
 	return -1;
 }
 
-double pow(double a, int k)
+double my_pow(double a, int k)
 {
 	int i = 0;
 	double res = 1.0;
@@ -81,7 +81,7 @@ bool calculate(char *a0,int num0)
 			p = q;
 			while (p <= r)
 			{
-				*p = 'a' + j;
+				*p = 'e' + j;
 				p++;
 			}
 		}
@@ -100,7 +100,7 @@ bool calculate(char *a0,int num0)
 			{
 				r++;
 				k = 0;
-				for (i = step; i < 4; i++)
+				for (i = step; i < 5; i++)
 				{
 					if (*r == sym[i])
 						k = 1;
@@ -112,7 +112,7 @@ bool calculate(char *a0,int num0)
 			{
 				s--;
 				k = 0;
-				for (i = step; i < 4; i++)
+				for (i = step; i < 5; i++)
 				{
 					if (*s == sym[i])
 					{
@@ -123,7 +123,7 @@ bool calculate(char *a0,int num0)
 				if (k == 1)
 					break;
 			}
-			if (q == s || r - q <= 1)
+			if (r - q <= 1)
 				return 1;
 			j = request_reg();
 			if (j < 0)
@@ -140,19 +140,23 @@ bool calculate(char *a0,int num0)
 					if (*p == '.'&&dotFlag == 0)
 					{
 						dot = p;
-						reg[j] *= pow(10, -(q - dot - 1));
+						reg[j] *= my_pow(10, -(q - dot - 1));
 						dotFlag = 1;
 					}
 					else if (*p == '.'&&dotFlag == 1)
 						return 1;
 					else
-						reg[j] += (*p - '0')*pow(10, dot - p - 1);
+						reg[j] += (*p - '0')*my_pow(10, dot - p - 1);
 				} while (p != s);
+			}
+			else if (s == q)
+			{
+				reg[j] = 1;
 			}
 			else
 			{
-				reg[j] = reg[*s - 'a'];
-				reg_use[*s - 'a'] = 0;
+				reg[j] = reg[*s - 'e'];
+				reg_use[*s - 'e'] = 0;
 			}
 			if (*(r - 1) >= '0'&&*(r - 1) <= '9')
 			{
@@ -166,24 +170,30 @@ bool calculate(char *a0,int num0)
 					if (*p == '.'&&dotFlag == 0)
 					{
 						dot = p;
-						res *= pow(10, -(r - dot - 1));
+						res *= my_pow(10, -(r - dot - 1));
 						dotFlag = 1;
 					}
 					else if (*p == '.'&&dotFlag == 1)
 						return 1;
 					else
-						res += (*p - '0')*pow(10, dot - p - 1);
+						res += (*p - '0')*my_pow(10, dot - p - 1);
 				} while (p != q + 1);
 			}
 			else
 			{
-				res = reg[*(r - 1) - 'a'];
-				reg_use[*(r - 1) - 'a'] = 0;
+				res = reg[*(r - 1) - 'e'];
+				reg_use[*(r - 1) - 'e'] = 0;
 			}
+			int i0 = reg[j];
 			switch (step)
 			{
 			case 0:
-
+				reg[j] = 0;
+				for (int i = 0; i < i0; i++)
+				{
+					reg[j] += roll_dice(res);
+				}
+				break;
 			case 1:
 				if (res == 0)
 					return 1;
@@ -202,7 +212,7 @@ bool calculate(char *a0,int num0)
 			p = s;
 			while (p != r)
 			{
-				*p = j + 'a';
+				*p = j + 'e';
 				p++;
 			}
 		}
@@ -212,11 +222,11 @@ bool calculate(char *a0,int num0)
 			step++;
 			q = a0;
 		}
-		if (step == 4)
+		if (step == 5)
 			break;
 	}
-	res_f = reg[*q - 'a'];
-	reg_use[*q - 'a'] = 0;
+	res_f = reg[*q - 'e'];
+	reg_use[*q - 'e'] = 0;
 	return 0;
 	/*char *p = a, *q = a, *p0 = a, *dot = a;
 	res = 0.0;
@@ -255,5 +265,7 @@ int main()
 {
 	double res;
 	calculate(a, num);
+	cout << res_f << endl;
+	system("pause");
 	return 0;
 }
