@@ -15,11 +15,12 @@ using namespace std;
 int ac = -1; //AuthCode 调用酷Q的方法时需要用到
 bool enabled = false;
 int lasttime = 0;
+char sym[5] = { 'd','/','*','-','+' };
 
-int roll_dice(int face)
-{
-	return rand() % face + 1;
-}
+int roll_dice(int face);
+int request_reg(int *reg, bool *reg_use, int reg_num);
+bool ini_cal(char *a0, int num0, int& res_f);
+bool calculate(char *a0, int num0, int reg_num, int *reg, bool *reg_use, int& res_f);
 
 /* 
 * 返回应用的ApiVer、Appid，打包后将不会调用
@@ -140,7 +141,14 @@ CQEVENT(int32_t, __eventPrivateMsg, 24)(int32_t subType, int32_t msgId, int64_t 
 				{
 					par1++;
 					char *par2 = par1;
-
+					while (*par2 != ' '&&*par2 != '\0')
+					{
+						par2++;
+					}
+					int res;
+					bool isValid = ini_cal(par1, par2 - par1, res);
+					itoa(res, p, 10);
+					CQ_sendPrivateMsg(ac, fromQQ, p);
 				}
 				break;
 			}
@@ -262,3 +270,209 @@ CQEVENT(int32_t, __menuB, 0)() {
 	return 0;
 }
 
+int roll_dice(int face)
+{
+	return rand() % face + 1;
+}
+
+
+int request_reg(int *reg, bool *reg_use,int reg_num)
+{
+	int i;
+	for (i = 0; i < reg_num; i++)
+	{
+		if (reg_use[i] == 0)
+		{
+			reg_use[i] = 1;
+			return i;
+		}
+	}
+	return -1;
+}
+
+bool ini_cal(char *a0, int num0, int& res_f)
+{
+	int reg_num = num0 / 3 + 1;
+	int *reg = new int[reg_num] {0};
+	bool *reg_use = new bool[reg_num] {0};
+	return calculate(a0, num0, reg_num, reg, reg_use, res_f);
+}
+
+bool calculate(char *a0, int num0,int reg_num,int *reg,bool *reg_use,int& res_f)//integer version
+{
+	char *p = a0, *q = a0, *r = a0, *s = a0, *dot = a0;
+	int step = 0, i = 0, j = 0, k = 0, dotFlag = 0;
+	int res = 0;
+	while (q - a0 < num0)
+	{
+		if (*q == '(')
+		{
+			i = 0;
+			r = q + 1;
+			while ((i != 0 || *r != ')'))
+			{
+				if (r - a0 >= num0)
+					return 1;
+				if (*r == '(')
+					i++;
+				else if (*r == ')')
+					i--;
+				r++;
+			}
+			j = request_reg(reg, reg_use, reg_num);
+			if (j < 0)
+				return 1;
+			calculate(q + 1, r - q - 1, reg_num, reg, reg_use, res_f);
+			reg[j] = res_f;
+			res_f = 0;
+			p = q;
+			while (p <= r)
+			{
+				*p = 'e' + j;
+				p++;
+			}
+		}
+		q++;
+	}
+	q = a0;
+	p = a0;
+	r = a0;
+	while (true)
+	{
+		if (*q == sym[step])
+		{
+			r = q;
+			s = q;
+			while (r - a0 < num0)
+			{
+				r++;
+				k = 0;
+				for (i = step; i < 5; i++)
+				{
+					if (*r == sym[i])
+						k = 1;
+				}
+				if (k == 1)
+					break;
+			}
+			while (s > a0)
+			{
+				s--;
+				k = 0;
+				for (i = step; i < 5; i++)
+				{
+					if (*s == sym[i])
+					{
+						k = 1;
+						s++;
+					}
+				}
+				if (k == 1)
+					break;
+			}
+			if (r - q <= 1)
+				return 1;
+			j = request_reg(reg, reg_use, reg_num);
+			if (j < 0)
+				return 1;
+			reg[j] = 0;
+			if (*s >= '0'&&*s <= '9')
+			{
+				p = q;
+				//dot = q;
+				//dotFlag = 0;
+				do
+				{
+					p--;
+					/*if (*p == '.'&&dotFlag == 0)
+					{
+						dot = p;
+						reg[j] *= my_pow(10, -(q - dot - 1));
+						dotFlag = 1;
+					}
+					else if (*p == '.'&&dotFlag == 1)
+						return 1;
+					else*/
+					reg[j] += (*p - '0')*pow(10, q - p - 1);
+				} while (p != s);
+			}
+			else if (s == q)
+			{
+				reg[j] = 1;
+			}
+			else
+			{
+				reg[j] = reg[*s - 'e'];
+				reg_use[*s - 'e'] = 0;
+			}
+			if (*(r - 1) >= '0'&&*(r - 1) <= '9')
+			{
+				p = r;
+				//dot = r;
+				//dotFlag = 0;
+				res = 0;
+				do
+				{
+					p--;
+					/*if (*p == '.'&&dotFlag == 0)
+					{
+						dot = p;
+						res *= my_pow(10, -(r - dot - 1));
+						dotFlag = 1;
+					}
+					else if (*p == '.'&&dotFlag == 1)
+						return 1;
+					else*/
+					res += (*p - '0')*pow(10, r - p - 1);
+				} while (p != q + 1);
+			}
+			else
+			{
+				res = reg[*(r - 1) - 'e'];
+				reg_use[*(r - 1) - 'e'] = 0;
+			}
+			int i0 = reg[j];
+			switch (step)
+			{
+			case 0:
+				reg[j] = 0;
+				for (int i = 0; i < i0; i++)
+				{
+					reg[j] += roll_dice(res);
+				}
+				break;
+			case 1:
+				if (res == 0)
+					return 1;
+				reg[j] /= res;
+				break;
+			case 2:
+				reg[j] *= res;
+				break;
+			case 3:
+				reg[j] -= res;
+				break;
+			case 4:
+				reg[j] += res;
+				break;
+			}
+			p = s;
+			while (p != r)
+			{
+				*p = j + 'e';
+				p++;
+			}
+		}
+		q++;
+		if (q - a0 == num0)
+		{
+			step++;
+			q = a0;
+		}
+		if (step == 5)
+			break;
+	}
+	res_f = reg[*q - 'e'];
+	reg_use[*q - 'e'] = 0;
+	return 0;
+}
