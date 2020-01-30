@@ -9,6 +9,7 @@
 #include "cqp.h"
 #include "appmain.h" //应用AppID等信息，请正确填写，否则酷Q可能无法加载
 #include <ctime>
+#include<vector>
 
 using namespace std;
 
@@ -19,7 +20,7 @@ char sym[5] = { 'd','/','*','-','+' };
 
 int roll_dice(int face);
 int request_reg(int *reg, bool *reg_use, int reg_num);
-bool ini_cal(char *a0, int num0, int& res_f);
+bool ini_cal(char *a0, int num0, int& res_f,vector<char>& outString);
 bool calculate(char *a0, int num0, int reg_num, int *reg, bool *reg_use, int& res_f);
 
 /* 
@@ -107,7 +108,7 @@ CQEVENT(int32_t, __eventPrivateMsg, 24)(int32_t subType, int32_t msgId, int64_t 
 	}
 	if (msg[0] == '.')
 	{
-		char *wholeCmd = new char[strlen(msg)];
+		char *wholeCmd = new char[strlen(msg)+1];
 		strcpy(wholeCmd, msg);
 		char *a = wholeCmd, *b = new char[CMDMAXLENTH];
 		bool isAvlCmd = false;
@@ -146,10 +147,21 @@ CQEVENT(int32_t, __eventPrivateMsg, 24)(int32_t subType, int32_t msgId, int64_t 
 						par2++;
 					}
 					int res;
-					bool isValid = ini_cal(par1, par2 - par1, res);
-					itoa(res, p, 10);
-					CQ_sendPrivateMsg(ac, fromQQ, p);
+					vector<char> outString;
+					bool isValid = ini_cal(par1, par2 - par1, res, outString);
+					outString.push_back('\0');
+					if (!isValid)
+					{
+						int t = outString.size() + 20;
+						char *outmes = new char[t];
+						copy(outString.begin(), outString.end(), outmes);
+						itoa(res, p, 10);
+						strcat(outmes, "=");
+						strcat(outmes, p);
+						CQ_sendPrivateMsg(ac, fromQQ, outmes);
+					}
 				}
+				delete[]p;
 				break;
 			}
 			case 1://.help
@@ -157,6 +169,9 @@ CQEVENT(int32_t, __eventPrivateMsg, 24)(int32_t subType, int32_t msgId, int64_t 
 				break;
 			}
 		}
+		delete[]wholeCmd;
+		delete[]b;
+		
 	}
 	//CQ_sendPrivateMsg(ac,fromQQ, msg);
 	//如果要回复消息，请调用酷Q方法发送，并且这里 return EVENT_BLOCK - 截断本条消息，不再继续处理  注意：应用优先级设置为"最高"(10000)时，不得使用本返回值
@@ -290,18 +305,79 @@ int request_reg(int *reg, bool *reg_use,int reg_num)
 	return -1;
 }
 
-bool ini_cal(char *a0, int num0, int& res_f)
+bool ini_cal(char *a0, int num0, int& res_f, vector<char>& outString)
 {
 	int reg_num = num0 / 3 + 1;
 	int *reg = new int[reg_num] {0};
 	bool *reg_use = new bool[reg_num] {0};
-	return calculate(a0, num0, reg_num, reg, reg_use, res_f);
+	char *curr = a0, *last = a0;
+	vector<char> wholeString;
+	while (curr - a0 < num0)
+	{
+		while (*curr != 'd'&&curr - a0 < num0) { curr++; }
+		if (curr - a0 >= num0)
+		{
+			wholeString.insert(wholeString.end(), last, curr);
+			break;
+		}
+		char *prev = curr - 1, *next = curr + 1;
+		int sum1 = 0, sum2 = 0, sum = 0;
+		while (*prev >= '0'&&*prev <= '9')
+		{
+			sum1 += (*prev - '0')*pow(10, curr - 1 - prev);
+			prev--;
+		}
+		if (curr - prev == 1) { sum1 = 1; }
+		while (*next >= '0'&&*next <= '9')
+		{
+			sum2 *= 10;
+			sum2 += (*next - '0');
+			next++;
+		}
+		int j = request_reg(reg, reg_use, reg_num);
+		if (j < 0) { break; }
+		vector<char> insertString;
+		insertString.push_back('(');
+		for (int i = 0; i < sum1; i++)
+		{
+			int t = roll_dice(sum2);
+			sum += t;
+			char *p = new char[log10(t) + 2];
+			itoa(t, p, 10);
+			char *q = p;
+			while (*q != '\0') { q++; }
+			insertString.insert(insertString.end(), p, q);
+			if (i == sum1 - 1) { continue; }
+			insertString.push_back(',');
+		}
+		insertString.push_back(')');
+		char* clear = prev + 1;
+		while (next - clear >= 1)
+		{
+			*clear = j + 'e';
+			clear++;
+		}
+		reg_use[j] = 1;
+		reg[j] = sum;
+		if (last <= prev)
+		{
+			wholeString.insert(wholeString.end(), last, prev + 1);
+		}
+		wholeString.insert(wholeString.end(), insertString.begin(), insertString.end());
+		last = next;
+		curr = next;
+	}
+	bool returnValue = calculate(a0, num0, reg_num, reg, reg_use, res_f);
+	delete[]reg;
+	delete[]reg_use;
+	outString = wholeString;
+	return returnValue;
 }
 
 bool calculate(char *a0, int num0,int reg_num,int *reg,bool *reg_use,int& res_f)//integer version
 {
-	char *p = a0, *q = a0, *r = a0, *s = a0, *dot = a0;
-	int step = 0, i = 0, j = 0, k = 0, dotFlag = 0;
+	char *p = a0, *q = a0, *r = a0, *s = a0;
+	int step = 0, i = 0, j = 0, k = 0;
 	int res = 0;
 	while (q - a0 < num0)
 	{
