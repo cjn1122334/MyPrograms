@@ -13,6 +13,8 @@
 
 using namespace std;
 
+#define CMDNUM 2
+
 int ac = -1; //AuthCode 调用酷Q的方法时需要用到
 bool enabled = false;
 int lasttime = 0;
@@ -47,7 +49,8 @@ CQEVENT(int32_t, Initialize, 4)(int32_t AuthCode) {
 * 如非必要，不建议在这里加载窗口。（可以添加菜单，让用户手动打开窗口）
 */
 CQEVENT(int32_t, __eventStartup, 0)() {
-	
+	int ttt = time(NULL);
+	srand(ttt);
 	return 0;
 }
 
@@ -69,6 +72,8 @@ CQEVENT(int32_t, __eventExit, 0)() {
 * 如非必要，不建议在这里加载窗口。（可以添加菜单，让用户手动打开窗口）
 */
 CQEVENT(int32_t, __eventEnable, 0)() {
+	int ttt = time(NULL);
+	srand(ttt);
 	enabled = true;
 	return 0;
 }
@@ -91,21 +96,14 @@ CQEVENT(int32_t, __eventDisable, 0)() {
 * subType 子类型，11/来自好友 1/来自在线状态 2/来自群 3/来自讨论组
 */
 CQEVENT(int32_t, __eventPrivateMsg, 24)(int32_t subType, int32_t msgId, int64_t fromQQ, const char *msg, int32_t font) {
-#define CMDNUM 2
+
 	char cmd[CMDNUM][10] = {
 		"d",
 		"help"
 		};
 	char helpDoc[] = "指令列表：\n.d \n.help";
 	int CMDMAXLENTH = 4;
-	int ttt=time(NULL);
-	if (ttt - lasttime > 60)
-	{
-		lasttime = ttt;
-		srand(ttt);
-		rand();
-		rand();
-	}
+	srand(lasttime);
 	if (msg[0] == '.')
 	{
 		char *wholeCmd = new char[strlen(msg)+1];
@@ -133,6 +131,7 @@ CQEVENT(int32_t, __eventPrivateMsg, 24)(int32_t subType, int32_t msgId, int64_t 
 				if (*par1 == 0)
 				{
 					int a = roll_dice(100);
+					lasttime = a;
 					strcpy(p, "1d100 = ");
 					itoa(a, p0, 10);
 					strcat(p, p0);
@@ -156,6 +155,7 @@ CQEVENT(int32_t, __eventPrivateMsg, 24)(int32_t subType, int32_t msgId, int64_t 
 						char *outmes = new char[t];
 						copy(outString.begin(), outString.end(), outmes);
 						itoa(res, p, 10);
+						lasttime = res;
 						strcat(outmes, "=");
 						strcat(outmes, p);
 						CQ_sendPrivateMsg(ac, fromQQ, outmes);
@@ -176,7 +176,7 @@ CQEVENT(int32_t, __eventPrivateMsg, 24)(int32_t subType, int32_t msgId, int64_t 
 	//CQ_sendPrivateMsg(ac,fromQQ, msg);
 	//如果要回复消息，请调用酷Q方法发送，并且这里 return EVENT_BLOCK - 截断本条消息，不再继续处理  注意：应用优先级设置为"最高"(10000)时，不得使用本返回值
 	//如果不回复消息，交由之后的应用/过滤器处理，这里 return EVENT_IGNORE - 忽略本条消息
-	return EVENT_IGNORE;
+	return EVENT_BLOCK;
 }
 
 
@@ -184,8 +184,90 @@ CQEVENT(int32_t, __eventPrivateMsg, 24)(int32_t subType, int32_t msgId, int64_t 
 * Type=2 群消息
 */
 CQEVENT(int32_t, __eventGroupMsg, 36)(int32_t subType, int32_t msgId, int64_t fromGroup, int64_t fromQQ, const char *fromAnonymous, const char *msg, int32_t font) {
+	char cmd[CMDNUM][10] = {
+		"d",
+		"help"
+	};
+	char helpDoc[] = "指令列表：\n.d \n.help";
+	int CMDMAXLENTH = 4;
+	srand(lasttime);
+	if (msg[0] == '.')
+	{
+		char *wholeCmd = new char[strlen(msg) + 1];
+		strcpy(wholeCmd, msg);
+		char *a = wholeCmd, *b = new char[CMDMAXLENTH];
+		bool isAvlCmd = false;
+		int i = 1, cmdNum = -1;
+		while (i <= CMDMAXLENTH && wholeCmd[i] != ' ')
+		{
+			b[i - 1] = wholeCmd[i];
+			i++;
+		}
+		b[i - 1] = 0;
+		for (int i0 = 0; i0 < CMDNUM; i0++)
+		{
+			if (strcmp(b, cmd[i0]) == 0) { isAvlCmd = true; cmdNum = i0; break; }
+		}
+		if (isAvlCmd)
+		{
+			switch (cmdNum)
+			{
+			case 0://.d
+			{
+				char *par1 = wholeCmd + 2, *p = new char[strlen(msg)], p0[3];
+				if (*par1 == 0)
+				{
+					int a = roll_dice(100);
+					strcpy(p, "1d100 = ");
+					itoa(a, p0, 10);
+					strcat(p, p0);
+					CQ_sendGroupMsg(ac, fromGroup, p);
+				}
+				else
+				{
+					par1++;
+					char *par2 = par1;
+					while (*par2 != ' '&&*par2 != '\0')
+					{
+						par2++;
+					}
+					int res;
+					vector<char> outString;
+					bool isValid = ini_cal(par1, par2 - par1, res, outString);
+					outString.push_back('\0');
+					if (!isValid)
+					{
+						int t = outString.size() + 50;
+						char *outmes = new char[t];
+						copy(outString.begin(), outString.end(), outmes);
+						itoa(res, p, 10);
+						lasttime = res;
+						strcat(outmes, "=");
+						strcat(outmes, p);
+						strcat(outmes, "\n");
+						char *atqq = new char[15];
+						strcat(outmes, "[CQ:at,qq=");
+						itoa(fromQQ, atqq, 10);
+						strcat(outmes, atqq);
+						strcat(outmes, "]");
+						//strcat(outmes, CQ_getGroupMemberInfoV2(ac, fromGroup, fromQQ, true));
+						CQ_sendGroupMsg(ac, fromGroup, outmes);
+						delete[]outmes;
+					}
+				}
+				delete[]p;
+				break;
+			}
+			case 1://.help
+				CQ_sendGroupMsg(ac, fromGroup, helpDoc);
+				break;
+			}
+		}
+		delete[]wholeCmd;
+		delete[]b;
 
-	return EVENT_IGNORE; //关于返回值说明, 见“_eventPrivateMsg”函数
+	}
+	return EVENT_BLOCK; //关于返回值说明, 见“_eventPrivateMsg”函数
 }
 
 
@@ -415,6 +497,15 @@ bool calculate(char *a0, int num0,int reg_num,int *reg,bool *reg_use,int& res_f)
 	r = a0;
 	while (true)
 	{
+		if (*q<'0' || *q>'9')
+		{
+			bool flag = true;
+			for (int i = 0; i < 5; i++)
+			{
+				if (*q == sym[i] || (*q - 'e' < reg_num&&*q - 'e' >= 0)) { flag = false; break; }
+			}
+			if (flag) { return 1; }
+		}
 		if (*q == sym[step])
 		{
 			r = q;
@@ -547,6 +638,17 @@ bool calculate(char *a0, int num0,int reg_num,int *reg,bool *reg_use,int& res_f)
 		}
 		if (step == 5)
 			break;
+	}
+	if (*q >= '0'&&*q <= '9')
+	{
+		res_f = 0;
+		while (q - a0 != num0)
+		{
+			res_f *= 10;
+			res_f += *q - '0';
+			q++;
+		}
+		return 0;
 	}
 	res_f = reg[*q - 'e'];
 	reg_use[*q - 'e'] = 0;
