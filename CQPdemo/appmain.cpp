@@ -125,7 +125,7 @@ CQEVENT(int32_t, __eventPrivateMsg, 24)(int32_t subType, int32_t msgId, int64_t 
 			{
 			case 0://.d
 			{
-				char *par1 = wholeCmd + 2, *p = new char[strlen(msg)], p0[3];
+				char *par1 = wholeCmd + 2, *p = new char[40], p0[10];
 				if (*par1 == 0)
 				{
 					int a = roll_dice(100);
@@ -213,7 +213,7 @@ CQEVENT(int32_t, __eventGroupMsg, 36)(int32_t subType, int32_t msgId, int64_t fr
 			{
 			case 0://.d
 			{
-				char *par1 = wholeCmd + 2, *p = new char[strlen(msg)], p0[3];
+				char *par1 = wholeCmd + 2, *p = new char[strlen(msg) + 20], p0[3];
 				if (*par1 == 0)
 				{
 					int a = roll_dice(100);
@@ -368,6 +368,10 @@ CQEVENT(int32_t, __menuB, 0)() {
 
 int roll_dice(int face)
 {
+	if (face < 1000)
+	{
+		return rand() % face + 1;
+	}
 	double sum = 0.0;
 	for (int i = 0; i < log10(face) + 1; i++)
 	{
