@@ -17,7 +17,7 @@ using namespace std;
 
 int ac = -1; //AuthCode 调用酷Q的方法时需要用到
 bool enabled = false;
-int lasttime = 0;
+int lasttime = time(0);
 char sym[5] = { 'd','/','*','-','+' };
 
 int roll_dice(int face);
@@ -72,8 +72,6 @@ CQEVENT(int32_t, __eventExit, 0)() {
 * 如非必要，不建议在这里加载窗口。（可以添加菜单，让用户手动打开窗口）
 */
 CQEVENT(int32_t, __eventEnable, 0)() {
-	int ttt = time(NULL);
-	srand(ttt);
 	enabled = true;
 	return 0;
 }
@@ -131,11 +129,11 @@ CQEVENT(int32_t, __eventPrivateMsg, 24)(int32_t subType, int32_t msgId, int64_t 
 				if (*par1 == 0)
 				{
 					int a = roll_dice(100);
-					lasttime = a;
 					strcpy(p, "1d100 = ");
 					itoa(a, p0, 10);
 					strcat(p, p0);
-					CQ_sendPrivateMsg(ac, fromQQ, p);
+					int mesid = CQ_sendPrivateMsg(ac, fromQQ, p);
+					lasttime = a + mesid;
 				}
 				else
 				{
@@ -155,10 +153,11 @@ CQEVENT(int32_t, __eventPrivateMsg, 24)(int32_t subType, int32_t msgId, int64_t 
 						char *outmes = new char[t];
 						copy(outString.begin(), outString.end(), outmes);
 						itoa(res, p, 10);
-						lasttime = res;
 						strcat(outmes, "=");
 						strcat(outmes, p);
-						CQ_sendPrivateMsg(ac, fromQQ, outmes);
+						int mesid=CQ_sendPrivateMsg(ac, fromQQ, outmes);
+						lasttime = res + mesid;
+						delete[]outmes;
 					}
 				}
 				delete[]p;
@@ -241,7 +240,6 @@ CQEVENT(int32_t, __eventGroupMsg, 36)(int32_t subType, int32_t msgId, int64_t fr
 						char *outmes = new char[t];
 						copy(outString.begin(), outString.end(), outmes);
 						itoa(res, p, 10);
-						lasttime = res;
 						strcat(outmes, "=");
 						strcat(outmes, p);
 						strcat(outmes, "\n");
@@ -251,7 +249,8 @@ CQEVENT(int32_t, __eventGroupMsg, 36)(int32_t subType, int32_t msgId, int64_t fr
 						strcat(outmes, atqq);
 						strcat(outmes, "]");
 						//strcat(outmes, CQ_getGroupMemberInfoV2(ac, fromGroup, fromQQ, true));
-						CQ_sendGroupMsg(ac, fromGroup, outmes);
+						int mesid=CQ_sendGroupMsg(ac, fromGroup, outmes);
+						lasttime = mesid + res;
 						delete[]outmes;
 					}
 				}
@@ -369,7 +368,13 @@ CQEVENT(int32_t, __menuB, 0)() {
 
 int roll_dice(int face)
 {
-	return rand() % face + 1;
+	double sum = 0.0;
+	for (int i = 0; i < log10(face) + 1; i++)
+	{
+		sum += rand() % 10;
+		sum /= 10;
+	}
+	return (int)(sum*face) + 1;
 }
 
 
