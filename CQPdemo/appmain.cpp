@@ -106,7 +106,7 @@ CQEVENT(int32_t, __eventPrivateMsg, 24)(int32_t subType, int32_t msgId, int64_t 
 	{
 		char *wholeCmd = new char[strlen(msg)+1];
 		strcpy(wholeCmd, msg);
-		char *a = wholeCmd, *b = new char[CMDMAXLENTH];
+		char *a = wholeCmd, *b = new char[CMDMAXLENTH + 10];
 		bool isAvlCmd = false;
 		int i = 1, cmdNum = -1;
 		while (i <= CMDMAXLENTH && wholeCmd[i] != ' ')
@@ -132,8 +132,8 @@ CQEVENT(int32_t, __eventPrivateMsg, 24)(int32_t subType, int32_t msgId, int64_t 
 					strcpy(p, "1d100 = ");
 					itoa(a, p0, 10);
 					strcat(p, p0);
-					int mesid = CQ_sendPrivateMsg(ac, fromQQ, p);
-					lasttime = a + mesid;
+					int mesid = CQ_sendGroupMsg(ac, fromQQ, p);
+					lasttime = mesid + a;
 				}
 				else
 				{
@@ -194,7 +194,7 @@ CQEVENT(int32_t, __eventGroupMsg, 36)(int32_t subType, int32_t msgId, int64_t fr
 	{
 		char *wholeCmd = new char[strlen(msg) + 1];
 		strcpy(wholeCmd, msg);
-		char *a = wholeCmd, *b = new char[CMDMAXLENTH];
+		char *a = wholeCmd, *b = new char[CMDMAXLENTH + 10];
 		bool isAvlCmd = false;
 		int i = 1, cmdNum = -1;
 		while (i <= CMDMAXLENTH && wholeCmd[i] != ' ')
@@ -213,14 +213,22 @@ CQEVENT(int32_t, __eventGroupMsg, 36)(int32_t subType, int32_t msgId, int64_t fr
 			{
 			case 0://.d
 			{
-				char *par1 = wholeCmd + 2, *p = new char[strlen(msg) + 20], p0[3];
+				char *par1 = wholeCmd + 2, *p = new char[strlen(msg) + 50], p0[10];
 				if (*par1 == 0)
 				{
 					int a = roll_dice(100);
 					strcpy(p, "1d100 = ");
 					itoa(a, p0, 10);
 					strcat(p, p0);
-					CQ_sendGroupMsg(ac, fromGroup, p);
+					strcat(p, "\n[CQ:at,qq=");
+					char *atqq = new char[15];
+					itoa(fromQQ / 10, atqq, 10);
+					strcat(p, atqq);
+					itoa(fromQQ % 10, atqq, 10);
+					strcat(p, atqq);
+					strcat(p, "]");
+					int mesid = CQ_sendGroupMsg(ac, fromGroup, p);
+					lasttime = mesid + a;
 				}
 				else
 				{
@@ -398,6 +406,7 @@ int request_reg(int *reg, bool *reg_use,int reg_num)
 
 bool ini_cal(char *a0, int num0, int& res_f, vector<char>& outString)
 {
+	if (num0 == 0) { return 1; }
 	int reg_num = num0 / 3 + 1;
 	int *reg = new int[reg_num] {0};
 	bool *reg_use = new bool[reg_num] {0};
