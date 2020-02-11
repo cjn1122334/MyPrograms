@@ -13,17 +13,25 @@
 
 using namespace std;
 
-#define CMDNUM 2
+#define CMDNUM 3
 
 int ac = -1; //AuthCode 调用酷Q的方法时需要用到
 bool enabled = false;
 int lasttime = time(0);
 char sym[5] = { 'd','/','*','-','+' };
+bool ksttl = false;
+int64_t player;
+bool ready = false;
+int starttime = time(0);
+int ans = 0;
+int Qnum = 0;
 
 int roll_dice(int face);
 int request_reg(int *reg, bool *reg_use, int reg_num);
 bool ini_cal(char *a0, int num0, int& res_f,vector<char>& outString);
 bool calculate(char *a0, int num0, int reg_num, int *reg, bool *reg_use, int& res_f);
+void kousuan(int64_t fromGroup, int64_t fromQQ, const char *mes);
+int generate(int method, char* outmes);
 
 /* 
 * 返回应用的ApiVer、Appid，打包后将不会调用
@@ -94,7 +102,6 @@ CQEVENT(int32_t, __eventDisable, 0)() {
 * subType 子类型，11/来自好友 1/来自在线状态 2/来自群 3/来自讨论组
 */
 CQEVENT(int32_t, __eventPrivateMsg, 24)(int32_t subType, int32_t msgId, int64_t fromQQ, const char *msg, int32_t font) {
-
 	char cmd[CMDNUM][10] = {
 		"d",
 		"help"
@@ -183,96 +190,126 @@ CQEVENT(int32_t, __eventPrivateMsg, 24)(int32_t subType, int32_t msgId, int64_t 
 * Type=2 群消息
 */
 CQEVENT(int32_t, __eventGroupMsg, 36)(int32_t subType, int32_t msgId, int64_t fromGroup, int64_t fromQQ, const char *fromAnonymous, const char *msg, int32_t font) {
-	char cmd[CMDNUM][10] = {
-		"d",
-		"help"
-	};
-	char helpDoc[] = "指令列表：\n.d \n.help";
-	int CMDMAXLENTH = 4;
-	srand(lasttime);
-	if (msg[0] == '.')
+	if (ksttl == true)
 	{
-		char *wholeCmd = new char[strlen(msg) + 1];
-		strcpy(wholeCmd, msg);
-		char *a = wholeCmd, *b = new char[CMDMAXLENTH + 10];
-		bool isAvlCmd = false;
-		int i = 1, cmdNum = -1;
-		while (i <= CMDMAXLENTH && wholeCmd[i] != ' ')
+		if (!ready)
 		{
-			b[i - 1] = wholeCmd[i];
-			i++;
-		}
-		b[i - 1] = 0;
-		for (int i0 = 0; i0 < CMDNUM; i0++)
-		{
-			if (strcmp(b, cmd[i0]) == 0) { isAvlCmd = true; cmdNum = i0; break; }
-		}
-		if (isAvlCmd)
-		{
-			switch (cmdNum)
+			if (time(0) - starttime > 15) { ksttl = false; }
+			else
 			{
-			case 0://.d
-			{
-				char *par1 = wholeCmd + 2, *p = new char[strlen(msg) + 50], p0[10];
-				if (*par1 == 0)
+				if (fromQQ == player)
 				{
-					int a = roll_dice(100);
-					strcpy(p, "1d100 = ");
-					itoa(a, p0, 10);
-					strcat(p, p0);
-					strcat(p, "\n[CQ:at,qq=");
-					char *atqq = new char[15];
-					itoa(fromQQ / 10, atqq, 10);
-					strcat(p, atqq);
-					itoa(fromQQ % 10, atqq, 10);
-					strcat(p, atqq);
-					strcat(p, "]");
-					int mesid = CQ_sendGroupMsg(ac, fromGroup, p);
-					lasttime = mesid + a;
+					kousuan(fromGroup, fromQQ, msg);
 				}
-				else
+			}
+		}
+		else
+		{
+			if (fromQQ == player)
+			{
+				kousuan(fromGroup, fromQQ, msg);
+			}
+		}
+	}
+	if (ksttl == false)
+	{
+		char cmd[CMDNUM][10] = {
+				"d",
+				"help",
+				"ksttl"
+		};
+		char helpDoc[] = "指令列表：\n.d \n.help";
+		int CMDMAXLENTH = 5;
+		srand(lasttime);
+		if (msg[0] == '.')
+		{
+			char *wholeCmd = new char[strlen(msg) + 1];
+			strcpy(wholeCmd, msg);
+			char *a = wholeCmd, *b = new char[CMDMAXLENTH + 10];
+			bool isAvlCmd = false;
+			int i = 1, cmdNum = -1;
+			while (i <= CMDMAXLENTH && wholeCmd[i] != ' ')
+			{
+				b[i - 1] = wholeCmd[i];
+				i++;
+			}
+			b[i - 1] = 0;
+			for (int i0 = 0; i0 < CMDNUM; i0++)
+			{
+				if (strcmp(b, cmd[i0]) == 0) { isAvlCmd = true; cmdNum = i0; break; }
+			}
+			if (isAvlCmd)
+			{
+				switch (cmdNum)
 				{
-					par1++;
-					char *par2 = par1;
-					while (*par2 != ' '&&*par2 != '\0')
+				case 0://.d
+				{
+					char *par1 = wholeCmd + 2, *p = new char[strlen(msg) + 50], p0[10];
+					if (*par1 == 0)
 					{
-						par2++;
-					}
-					int res;
-					vector<char> outString;
-					bool isValid = ini_cal(par1, par2 - par1, res, outString);
-					outString.push_back('\0');
-					if (!isValid)
-					{
-						int t = outString.size() + 50;
-						char *outmes = new char[t];
-						copy(outString.begin(), outString.end(), outmes);
-						itoa(res, p, 10);
-						strcat(outmes, "=");
-						strcat(outmes, p);
-						strcat(outmes, "\n");
+						int a = roll_dice(100);
+						strcpy(p, "1d100 = ");
+						itoa(a, p0, 10);
+						strcat(p, p0);
+						strcat(p, "\n[CQ:at,qq=");
 						char *atqq = new char[15];
-						strcat(outmes, "[CQ:at,qq=");
-						itoa(fromQQ, atqq, 10);
-						strcat(outmes, atqq);
-						strcat(outmes, "]");
-						//strcat(outmes, CQ_getGroupMemberInfoV2(ac, fromGroup, fromQQ, true));
-						int mesid=CQ_sendGroupMsg(ac, fromGroup, outmes);
-						lasttime = mesid + res;
-						delete[]outmes;
+						itoa(fromQQ / 10, atqq, 10);
+						strcat(p, atqq);
+						itoa(fromQQ % 10, atqq, 10);
+						strcat(p, atqq);
+						strcat(p, "]");
+						int mesid = CQ_sendGroupMsg(ac, fromGroup, p);
+						lasttime = mesid + a;
 					}
+					else
+					{
+						par1++;
+						char *par2 = par1;
+						while (*par2 != ' '&&*par2 != '\0')
+						{
+							par2++;
+						}
+						int res;
+						vector<char> outString;
+						bool isValid = ini_cal(par1, par2 - par1, res, outString);
+						outString.push_back('\0');
+						if (!isValid)
+						{
+							int t = outString.size() + 50;
+							char *outmes = new char[t];
+							copy(outString.begin(), outString.end(), outmes);
+							itoa(res, p, 10);
+							strcat(outmes, "=");
+							strcat(outmes, p);
+							strcat(outmes, "\n");
+							char *atqq = new char[15];
+							strcat(outmes, "[CQ:at,qq=");
+							itoa(fromQQ / 10, atqq, 10);
+							strcat(outmes, atqq);
+							itoa(fromQQ % 10, atqq, 10);
+							strcat(outmes, atqq);
+							strcat(outmes, "]");
+							//strcat(outmes, CQ_getGroupMemberInfoV2(ac, fromGroup, fromQQ, true));
+							int mesid = CQ_sendGroupMsg(ac, fromGroup, outmes);
+							lasttime = mesid + res;
+							delete[]outmes;
+						}
+					}
+					delete[]p;
+					break;
 				}
-				delete[]p;
-				break;
+				case 1://.help
+					CQ_sendGroupMsg(ac, fromGroup, helpDoc);
+					break;
+				case 2://.ksttl
+					kousuan(fromGroup, fromQQ, msg);
+					break;
+				}
 			}
-			case 1://.help
-				CQ_sendGroupMsg(ac, fromGroup, helpDoc);
-				break;
-			}
-		}
-		delete[]wholeCmd;
-		delete[]b;
+			delete[]wholeCmd;
+			delete[]b;
 
+		}
 	}
 	return EVENT_BLOCK; //关于返回值说明, 见“_eventPrivateMsg”函数
 }
@@ -671,4 +708,140 @@ bool calculate(char *a0, int num0,int reg_num,int *reg,bool *reg_use,int& res_f)
 	res_f = reg[*q - 'e'];
 	reg_use[*q - 'e'] = 0;
 	return 0;
+}
+
+void kousuan(int64_t fromGroup, int64_t fromQQ,const char *mes)
+{
+	if (ksttl == false && ready == false)
+	{
+		ksttl = true;
+		starttime = time(0);
+		player = fromQQ;
+		char* expDoc = new char[160];
+		expDoc[0] = '\0';
+		strcat(expDoc, "请准备口算天天练，接下来会有5道四位数加减法和5道结果不超过五位的乘除，直接发出答案即可，答案均为整数。准备就绪后，发送任意消息。\n[CQ:at,qq=");
+		char* atqq = new char[20]{ '\0' };
+		itoa(fromQQ / 10, atqq, 10);
+		strcat(expDoc, atqq);
+		itoa(fromQQ % 10, atqq, 10);
+		strcat(expDoc, atqq);
+		strcat(expDoc, "]");
+		delete[]atqq;
+		CQ_sendGroupMsg(ac, fromGroup, expDoc);
+		delete[]expDoc;
+		return;
+	}
+	else if (ksttl == true && ready == false)
+	{
+		ready = true;
+		starttime = time(0);
+		char* outmes = new char[15]{ '\0' };
+		ans = generate(0, outmes);
+		CQ_sendGroupMsg(ac, fromGroup, outmes);
+		delete[]outmes;
+		Qnum = 1;
+		return;
+	}
+	else if (ksttl == true && ready == true)
+	{
+		char* buf = new char[10];
+		itoa(ans, buf, 10);
+		if (strcmp(buf, mes) == 0)
+		{
+			int mesid = CQ_sendGroupMsg(ac, fromGroup, "正确");
+			lasttime = ans + mesid;
+		}
+		else
+		{
+			char* outmes = new char[25];
+			strcpy(outmes, "错误，正确答案是");
+			strcat(outmes, buf);
+			int mesid = CQ_sendGroupMsg(ac, fromGroup, outmes);
+			lasttime = ans + mesid;
+			delete[]outmes;
+		}
+		delete[]buf;
+		char* outmes = new char[25]{ '\0' };
+		if (Qnum < 5)
+		{
+			ans = generate(0, outmes);
+		}
+		else if (Qnum >= 5 && Qnum < 10)
+		{
+			ans = generate(1, outmes);
+		}
+		else
+		{
+			ksttl = false;
+			ready = false;
+			player = 0;
+			int durtime = time(0) - starttime;
+			strcpy(outmes, "您本次用时");
+			char* buf = new char[10];
+			itoa(durtime, buf, 10);
+			strcat(outmes, buf);
+			strcat(outmes, "秒");
+			CQ_sendGroupMsg(ac, fromGroup, outmes);
+			delete[]buf;
+			delete[]outmes;
+			return;
+		}
+		CQ_sendGroupMsg(ac, fromGroup, outmes);
+		delete[]outmes;
+		Qnum++;
+		return;
+	}
+}
+
+int generate(int method,char* outmes)
+{
+	srand(lasttime);
+	char *buf = new char[10];
+	int op, op1, op2;
+	switch (method)
+	{
+	case 0://+/-
+		op1 = roll_dice(10000);
+		op2 = roll_dice(10000);
+		op = roll_dice(2);
+		itoa(op1, outmes, 10);
+		itoa(op2, buf, 10);
+		if (op == 1)
+		{
+			strcat(outmes, "+");
+			strcat(outmes, buf);
+			delete[]buf;
+			return op1 + op2;
+		}
+		if (op == 2)
+		{
+			strcat(outmes, "-");
+			strcat(outmes, buf);
+			delete[]buf;
+			return op1 - op2;
+		}
+		break;
+	case 1://*&/
+		op1 = roll_dice(100);
+		op2 = roll_dice(100);
+		op = roll_dice(2);
+		itoa(op1, buf, 10);
+		if (op == 1)//*
+		{
+			itoa(op2, outmes, 10);
+			strcat(outmes, "*");
+			strcat(outmes, buf);
+			delete[]buf;
+			return op1 * op2;
+		}
+		if (op == 2)// /
+		{
+			itoa(op1*op2, outmes, 10);
+			strcat(outmes, "/");
+			strcat(outmes, buf);
+			delete[]buf;
+			return op2;
+		}
+		break;
+	}
 }
