@@ -349,7 +349,7 @@ CQEVENT(int32_t, __eventGroupMsg, 36)(int32_t subType, int32_t msgId, int64_t fr
 					int luk = (roll_dice(6) + roll_dice(6) + roll_dice(6)) * 5;
 					int sum = str + con + dex + app + pow + siz + inte + edu + luk;
 					char* outmes = new char[150];
-					sprintf(outmes, "STR %d CON %d DEX %d\nAPP %d POW %d SIZ %d\nINT %d EDU %d LUK %d\n除幸运外属性之和：%d\n投出更好属性的概率：", str, con, dex, app, pow, siz, inte, edu, luk, sum);
+					sprintf(outmes, "STR %d CON %d DEX %d APP %d POW %d\nSIZ %d INT %d EDU %d\nLUK %d\n除幸运外属性之和：%d\n投出更好属性的概率：", str, con, dex, app, pow, siz, inte, edu, luk, sum);
 					sum -= 90;
 					sum /= 5;
 					int pr[121] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,2,3,4,6,10,15,22,33,48,68,95,131,179,240,318,414,534,678,850,1053,
@@ -361,8 +361,11 @@ CQEVENT(int32_t, __eventGroupMsg, 36)(int32_t subType, int32_t msgId, int64_t fr
 					else
 					{
 						char pr1[40];
-						sprintf(pr1, "%d.%d%%\n[CQ:at,qq=%d]", (10000 - pr[sum - 24]) / 100, (10000 - pr[sum - 24]) % 100, fromQQ );
+						sprintf(pr1, "%d.%d%%\n[CQ:at,qq=%d", (10000 - pr[sum - 24]) / 100, (10000 - pr[sum - 24]) % 100, fromQQ / 10);
 						strcat(outmes, pr1);
+						itoa(fromQQ % 10, pr1, 10);
+						strcat(outmes, pr1);
+						strcat(outmes, "]");
 					}
 					
 					int mesid = CQ_sendGroupMsg(ac, fromGroup, outmes);
