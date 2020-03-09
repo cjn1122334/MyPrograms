@@ -13,7 +13,7 @@
 
 using namespace std;
 
-#define CMDNUM 3
+#define CMDNUM 4
 
 int ac = -1; //AuthCode 调用酷Q的方法时需要用到
 bool enabled = false;
@@ -104,9 +104,10 @@ CQEVENT(int32_t, __eventDisable, 0)() {
 CQEVENT(int32_t, __eventPrivateMsg, 24)(int32_t subType, int32_t msgId, int64_t fromQQ, const char *msg, int32_t font) {
 	char cmd[CMDNUM][10] = {
 		"d",
-		"help"
+		"help",
+		"coc7"
 		};
-	char helpDoc[] = "指令列表：\n.d \n.help";
+	char helpDoc[] = "指令列表：\n.d \n.help \n.coc7 ";
 	int CMDMAXLENTH = 4;
 	srand(lasttime);
 	if (msg[0] == '.')
@@ -173,6 +174,37 @@ CQEVENT(int32_t, __eventPrivateMsg, 24)(int32_t subType, int32_t msgId, int64_t 
 			case 1://.help
 				CQ_sendPrivateMsg(ac, fromQQ, helpDoc);
 				break;
+			case 2://.coc7
+				int str = (roll_dice(6) + roll_dice(6) + roll_dice(6)) * 5;
+				int con = (roll_dice(6) + roll_dice(6) + roll_dice(6)) * 5;
+				int dex = (roll_dice(6) + roll_dice(6) + roll_dice(6)) * 5;
+				int app = (roll_dice(6) + roll_dice(6) + roll_dice(6)) * 5;
+				int pow = (roll_dice(6) + roll_dice(6) + roll_dice(6)) * 5;
+				int siz = (roll_dice(6) + roll_dice(6) + 6) * 5;
+				int inte = (roll_dice(6) + roll_dice(6) + 6) * 5;
+				int edu = (roll_dice(6) + roll_dice(6) + 6) * 5;
+				int luk = (roll_dice(6) + roll_dice(6) + roll_dice(6)) * 5;
+				int sum = str + con + dex + app + pow + siz + inte + edu + luk;
+				char* outmes = new char[150];
+				sprintf(outmes, "STR %d CON %d DEX %d\nAPP %d POW %d SIZ %d\nINT %d EDU %d LUK %d\n除幸运外属性之和：%d\n投出更好属性的概率：", str, con, dex, app, pow, siz, inte, edu, luk, sum);
+				sum -= 90;
+				sum /= 5;
+				int pr[121] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,2,3,4,6,10,15,22,33,48,68,95,131,179,240,318,414,534,678,850,1053,
+					1289,1557,1860,2197,2566,2963,3387,3832,4293,4763,5237,5707,6168,6613,7037,7434,7803,8140,8443,8711,8947,9150,9322,9466,9586,9682,9760,9821,9869,9905,9932,9952,9967,9978,
+					9985,9990,9994,9996,9997,9998,9999,9999,10000,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,
+					10000,10000,10000,10000,10000,10000,10000,10000,10000,10000 };
+				if (pr[sum - 24] == 0) { strcat(outmes, ">99.99%"); }
+				else if (pr[sum - 24] == 10000) { strcat(outmes, "<0.01%"); }
+				else
+				{
+					char pr1[10];
+					sprintf(pr1, "%d.%d%%", (10000 - pr[sum - 24]) / 100, (10000 - pr[sum - 24]) % 100);
+					strcat(outmes, pr1);
+				}
+				int mesid = CQ_sendPrivateMsg(ac, fromQQ, outmes);
+				lasttime = mesid + pr[sum - 24];
+				delete[]outmes;
+				break;
 			}
 		}
 		delete[]wholeCmd;
@@ -216,9 +248,10 @@ CQEVENT(int32_t, __eventGroupMsg, 36)(int32_t subType, int32_t msgId, int64_t fr
 		char cmd[CMDNUM][10] = {
 				"d",
 				"help",
-				"ksttl"
+				"ksttl",
+				"coc7"
 		};
-		char helpDoc[] = "指令列表：\n.d \n.help";
+		char helpDoc[] = "指令列表：\n.d \n.help \n.ksttl \n.coc7 ";
 		int CMDMAXLENTH = 5;
 		srand(lasttime);
 		if (msg[0] == '.')
@@ -303,6 +336,38 @@ CQEVENT(int32_t, __eventGroupMsg, 36)(int32_t subType, int32_t msgId, int64_t fr
 					break;
 				case 2://.ksttl
 					kousuan(fromGroup, fromQQ, msg);
+					break;
+				case 3://.coc7
+					int str = (roll_dice(6) + roll_dice(6) + roll_dice(6)) * 5;
+					int con = (roll_dice(6) + roll_dice(6) + roll_dice(6)) * 5;
+					int dex = (roll_dice(6) + roll_dice(6) + roll_dice(6)) * 5;
+					int app = (roll_dice(6) + roll_dice(6) + roll_dice(6)) * 5;
+					int pow = (roll_dice(6) + roll_dice(6) + roll_dice(6)) * 5;
+					int siz = (roll_dice(6) + roll_dice(6) + 6) * 5;
+					int inte = (roll_dice(6) + roll_dice(6) + 6) * 5;
+					int edu = (roll_dice(6) + roll_dice(6) + 6) * 5;
+					int luk = (roll_dice(6) + roll_dice(6) + roll_dice(6)) * 5;
+					int sum = str + con + dex + app + pow + siz + inte + edu + luk;
+					char* outmes = new char[150];
+					sprintf(outmes, "STR %d CON %d DEX %d\nAPP %d POW %d SIZ %d\nINT %d EDU %d LUK %d\n除幸运外属性之和：%d\n投出更好属性的概率：", str, con, dex, app, pow, siz, inte, edu, luk, sum);
+					sum -= 90;
+					sum /= 5;
+					int pr[121] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,2,3,4,6,10,15,22,33,48,68,95,131,179,240,318,414,534,678,850,1053,
+						1289,1557,1860,2197,2566,2963,3387,3832,4293,4763,5237,5707,6168,6613,7037,7434,7803,8140,8443,8711,8947,9150,9322,9466,9586,9682,9760,9821,9869,9905,9932,9952,9967,9978,
+						9985,9990,9994,9996,9997,9998,9999,9999,10000,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,10000 ,
+						10000,10000,10000,10000,10000,10000,10000,10000,10000,10000 };
+					if (pr[sum - 24] == 0) { strcat(outmes, ">99.99%"); }
+					else if (pr[sum - 24] == 10000) { strcat(outmes, "<0.01%"); }
+					else
+					{
+						char pr1[40];
+						sprintf(pr1, "%d.%d%%\n[CQ:at,qq=%d]", (10000 - pr[sum - 24]) / 100, (10000 - pr[sum - 24]) % 100, fromQQ );
+						strcat(outmes, pr1);
+					}
+					
+					int mesid = CQ_sendGroupMsg(ac, fromGroup, outmes);
+					lasttime = mesid + pr[sum - 24];
+					delete[]outmes;
 					break;
 				}
 			}
